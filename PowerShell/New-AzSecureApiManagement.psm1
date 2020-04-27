@@ -47,12 +47,12 @@ function  New-AzSecureApiManagement {
         [Parameter(Position=3,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
-        [String[]]$VirtualNetworkCidr="10.0.0.0/23",
+        [String[]]$VirtualNetworkCidr="10.0.0.0/24",
 
         [Parameter(Position=4,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
-        [String]$BackendSubnetCidr="10.0.0.0/24",
+        [String]$BackendSubnetCidr="10.0.0.0/25",
 
         [Parameter(Position=5,
         Mandatory=$False, 
