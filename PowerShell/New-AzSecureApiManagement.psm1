@@ -487,20 +487,27 @@ function  New-AzSecureApiManagement {
         Start-Sleep 3
 
         Write-Host "Adding certificates to Key Vault"
-        $gatewaycert = Add-AzKeyVaultCertificate -VaultName $keyvaultname -Name $gatewaycertname  -CertificatePolicy $gatewaypolicy
-        $portalcert = Add-AzKeyVaultCertificate -VaultName $keyvaultname -Name $portalcertname -CertificatePolicy $portalpolicy
-
-        Start-Sleep 60
-
-        Write-Host "Getting reference to Key Vault certificates"
-        $gatewaycert = Get-AzKeyVaultCertificate -VaultName $keyvaultname -Name $gatewaycertname
-        $portalcert = Get-AzKeyVaultCertificate -VaultName $keyvaultname -Name $portalcertname
+        Add-AzKeyVaultCertificate -VaultName $keyvaultname -Name $gatewaycertname  -CertificatePolicy $gatewaypolicy
+        Add-AzKeyVaultCertificate -VaultName $keyvaultname -Name $portalcertname -CertificatePolicy $portalpolicy
 
         Start-Sleep 3
-
-        Write-Host "Getting Secret Id for certificate access"
-        $gatewaycertsecretid = $gatewaycert.SecretId.Replace($portalcert.Version, "")
-        $portalcertsecretid = $portalcert.SecretId.Replace($portalcert.Version, "")
+        
+        $errorcount=0
+        do {
+            $errorcount++
+            try {
+                Write-Host "Getting reference to Key Vault certificates"
+                $gatewaycert = Get-AzKeyVaultCertificate -VaultName $keyvaultname -Name $gatewaycertname
+                $portalcert = Get-AzKeyVaultCertificate -VaultName $keyvaultname -Name $portalcertname
+                Write-Host "Getting Secret Id for certificate access"
+                $gatewaycertsecretid = $gatewaycert.SecretId.Replace($gatewaycert.Version, "")
+                $portalcertsecretid = $portalcert.SecretId.Replace($portalcert.Version, "")
+                return
+            } catch {
+                Write-Error $_.Exception.InnerException.Message -ErrorAction Continue
+                Start-Sleep 60
+            }
+        } while ($errorcount -lt 10)
 
         Start-Sleep 10
 
