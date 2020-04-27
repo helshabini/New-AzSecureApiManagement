@@ -38,9 +38,36 @@ This setup will create the following resources
 * Application Gateway with Web Application Firewall component. The Application Gateway is configured to proxy traffic listened for on the Public IP Address with the specified hostnames to the API Management backend
 * Application Gateway User Managed Identity, to allow the Application Gateway to grab certificates from Key Vault
 
+## Requirements and Setup
+
+* The only requirement is Azure's PowerShell Module
+
+```powershell
+Install-Module -Name Az -AllowClobber
+```
+
+* Connecting to Azure and selecing your subscription
+
+```powershell
+Connect-AzAccount
+Select-AzSubscription -Subscription "Id of your subscription"
+```
+
+* Importing the module (preferably as administrator)
+
+```powershell
+Import-Module .\New-AzSecureApiManagement.psm1
+```
+
 ## Examples
 
 * Create a new environment using self-signed certificates, these are created and signed by Key Vault. This is not recommended for a production environment.
+
+```powershell
+New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -ApimSku "Developer" -ApimVpnType "Internal" -UseSelfSignedCertificates -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net" -IsWellKnownCA
+```
+
+* Create a new environment using self-signed certificates, these are created and signed by Key Vault, with custom virtual network configuration. This is not recommended for a production environment.
 
 ```powershell
 New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -VirtualNetworkCidr "10.0.1.0/23" -BackendSubnetCidr "10.0.1.0/24" -FrontendSubnetCidr "10.0.2.0/26" -ApimSubnetCidr "10.0.2.64/26" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -ApimSku "Developer" -ApimVpnType "Internal" -UseSelfSignedCertificates -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net" -IsWellKnownCA
