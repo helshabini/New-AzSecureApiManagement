@@ -157,7 +157,7 @@ function  New-AzSecureApiManagement {
             }
         }
         
-        Install-Module -Name Az.ManagedServiceIdentity -Force
+        Install-Module -Name Az.ManagedServiceIdentity -Scope CurrentUser -Force
     }
     process {
         #Resource names
