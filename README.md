@@ -23,6 +23,7 @@ The aim of this setup is to automate the process of environment creation, accord
   * **Using Certificates from a public well-known CA**: For production environment where the APIs are intended to be used externally. For example, in cases when the APIs and the APIM development portal are to be used by third-parties, mobile or web applications, and access publicly
   * **Using Certificates from a private CA**: For development or production environments where the APIs are intended to be used internally. Such as in internal application, or consumption via a tool which trusts the same CA
 * The API Management resource is setup in either *Internal* or *External* VPN Types. For more information about the difference between the two, please refer to this [docs article](https://docs.microsoft.com/en-us/azure/api-management/api-management-using-with-internal-vnet)
+* The Application Gateway resource is setup with an SKU of *WAF_v2* and the WAF component is enabled by default in *Prevention* mode. This resource is intended to securely proxy traffic back to the APIM resource. However, there is nothing to prevent you for adding more Listeners, Rules, and Backends to expose any additional services in your Backend subnet or any other subnet you create later
 
 ## Resources
 
