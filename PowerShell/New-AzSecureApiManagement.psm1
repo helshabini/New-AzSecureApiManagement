@@ -51,22 +51,22 @@ function  New-AzSecureApiManagement {
         [Parameter(Position=3,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
-        [String[]]$VirtualNetworkCidr="10.0.0.0/24",
+        [String[]]$VirtualNetworkCidr="10.0.1.0/23",
 
         [Parameter(Position=4,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
-        [String]$BackendSubnetCidr="10.0.0.0/25",
+        [String]$BackendSubnetCidr="10.0.1.0/24",
 
         [Parameter(Position=5,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
-        [String]$FrontendSubnetCidr="10.0.0.0/26",
+        [String]$FrontendSubnetCidr="10.0.2.0/26",
 
         [Parameter(Position=6,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
-        [String]$ApimSubnetCidr="10.0.0.0/26",
+        [String]$ApimSubnetCidr="10.0.2.0/26",
 
         [Parameter(Position=7,
         Mandatory=$False, 
