@@ -47,22 +47,22 @@ function  New-AzSecureApiManagement {
         [Parameter(Position=3,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
-        [String[]]$VirtualNetworkCidr,
+        [String[]]$VirtualNetworkCidr="10.0.0.0/23",
 
         [Parameter(Position=4,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
-        [String]$BackendSubnetCidr,
+        [String]$BackendSubnetCidr="10.0.0.0/24",
 
         [Parameter(Position=5,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
-        [String]$FrontendSubnetCidr,
+        [String]$FrontendSubnetCidr="10.0.1.0/27",
 
         [Parameter(Position=6,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
-        [String]$ApimSubnetCidr,
+        [String]$ApimSubnetCidr="10.0.1.0/27",
 
         [Parameter(Position=7,
         Mandatory=$False, 
@@ -168,13 +168,9 @@ function  New-AzSecureApiManagement {
         $frontendsubnetnsgname = "nsg-FrontendSubnet-" + $EnvironmentName + $Random
 
         #Network related inputs
-        $vnetcidr = "10.1.12.0/23" #optional if vnet already exists
-        $backendsubnetname = "BackendSubnet" #name of the subnet where the AKS will be deployed, subnet must be empty
-        $backendsubnetcidr = "10.1.12.0/24" #optional if vnet already exists
+        $backendsubnetname = "BackendSubnet" #name of the subnet where the backend shall be deployed, subnet must be empty
         $apimsubnetname = "APIMSubnet" #name of the subnet where APIM will be deployed
-        $apimsubnetcidr = "10.1.13.144/28" #optional if vnet already exists
         $frontendsubnetname = "FrontendSubnet" #name of the subnet where the Application Gateway will be deployed
-        $frontendsubnetcidr = "10.1.13.224/28" #optional if vnet already exists
 
         #Key Vault related inputs
         $gatewaycertname = $EnvironmentName + $Random + "GatewayCert"
@@ -211,7 +207,7 @@ function  New-AzSecureApiManagement {
             -ResourceGroupName $ResourceGroupName `
             -Location $Location `
             -Name $vnetname `
-            -AddressPrefix $vnetcidr
+            -AddressPrefix $VirtualNetworkCidr
 
         Start-Sleep 3
 
@@ -228,7 +224,7 @@ function  New-AzSecureApiManagement {
 
         Add-AzVirtualNetworkSubnetConfig `
             -Name $backendsubnetname `
-            -AddressPrefix $backendsubnetcidr `
+            -AddressPrefix $BackendSubnetCidr `
             -VirtualNetwork $clustervnet `
             -NetworkSecurityGroup $clusternsg
 
@@ -415,7 +411,7 @@ function  New-AzSecureApiManagement {
 
         Add-AzVirtualNetworkSubnetConfig `
             -Name $apimsubnetname `
-            -AddressPrefix $apimsubnetcidr `
+            -AddressPrefix $ApimSubnetCidr `
             -VirtualNetwork $clustervnet `
             -NetworkSecurityGroup $apimnsg
 
@@ -446,7 +442,7 @@ function  New-AzSecureApiManagement {
 
         Add-AzVirtualNetworkSubnetConfig `
             -Name $frontendsubnetname `
-            -AddressPrefix $frontendsubnetcidr `
+            -AddressPrefix $FrontendSubnetCidr `
             -VirtualNetwork $clustervnet `
             -NetworkSecurityGroup $frontendnsg
 
@@ -800,3 +796,5 @@ function  New-AzSecureApiManagement {
         $appgw
     }
 }
+
+Export-ModuleMember -Function New-AzSecureApiManagement
