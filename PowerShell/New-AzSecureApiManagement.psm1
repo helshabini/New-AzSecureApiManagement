@@ -422,10 +422,26 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
+        $frontendnsgrules = @()
+        $frontendnsgrules += New-AzNetworkSecurityRuleConfig `
+            -Name "AllowInternet" `
+            -Description "Incoming internet traffic" `
+            -Priority 400 `
+            -SourceAddressPrefix Internet `
+            -DestinationAddressPrefix Any `
+            -SourcePortRange * `
+            -DestinationPortRange 65200-65535 `
+            -Protocol TCP `
+            -Direction Inbound `
+            -Access Allow
+
+        Start-Sleep 3
+
         $frontendnsg = New-AzNetworkSecurityGroup `
             -ResourceGroupName $ResourceGroupName `
             -Location $Location `
-            -Name $frontendsubnetnsgname
+            -Name $frontendsubnetnsgname `
+            -SecurityRules $frontendnsgrules
 
         Start-Sleep 3
 
