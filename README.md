@@ -87,6 +87,8 @@ New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEur
 
 ## To-do List
 
+* Add functionality to upload custom certificates to KeyVault (currently only supports self-signing)
+* Add functionality to create DNS Name for the Application Gateway's Public IP Address, that way users can create a CName to the Public IP Address rather than an A Record.
 * Create ARM Template to install the same setup using ARM
 * Create az cli script to install the same setup (currently blocked by az apim module not being ready)
 * Add functionality for installing Kubernetes in the backend subnet

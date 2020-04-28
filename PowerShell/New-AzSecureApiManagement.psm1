@@ -424,13 +424,37 @@ function  New-AzSecureApiManagement {
 
         $frontendnsgrules = @()
         $frontendnsgrules += New-AzNetworkSecurityRuleConfig `
-            -Name "AllowInternet" `
-            -Description "Incoming internet traffic" `
+            -Name "AllowExternal" `
+            -Description "Incoming HTTP/S traffic" `
             -Priority 400 `
             -SourceAddressPrefix Internet `
-            -DestinationAddressPrefix Any `
+            -DestinationAddressPrefix $FrontendSubnetCidr `
+            -SourcePortRange * `
+            -DestinationPortRange 80,443 `
+            -Protocol TCP `
+            -Direction Inbound `
+            -Access Allow
+
+        $frontendnsgrules += New-AzNetworkSecurityRuleConfig `
+            -Name "AllowGatewayManager" `
+            -Description "Incoming HTTPS traffic" `
+            -Priority 410 `
+            -SourceAddressPrefix GatewayManager `
+            -DestinationAddressPrefix * `
             -SourcePortRange * `
             -DestinationPortRange 65200-65535 `
+            -Protocol TCP `
+            -Direction Inbound `
+            -Access Allow
+
+        $frontendnsgrules += New-AzNetworkSecurityRuleConfig `
+            -Name "AllowLoadBalancer" `
+            -Description "Azure Infrastructure Load Balancer." `
+            -Priority 420 `
+            -SourceAddressPrefix AzureLoadBalancer `
+            -DestinationAddressPrefix VirtualNetwork `
+            -SourcePortRange * `
+            -DestinationPortRange * `
             -Protocol TCP `
             -Direction Inbound `
             -Access Allow
@@ -601,9 +625,11 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
+        Write-Host "Assigning the User Assigned Managed Identity to the App Gateway"
         $appgwidentity = New-AzApplicationGatewayIdentity `
             -UserAssignedIdentityId $appgwuseridentity.Id
 
+        Write-Host "Creating the Application Gateway's Public IP Address"
         $appgwpublicip = New-AzPublicIpAddress `
             -ResourceGroupName $ResourceGroupName `
             -name $appgwpublicipname `
