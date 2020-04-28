@@ -422,26 +422,10 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
-        $frontendnsgrules = @()
-        $frontendnsgrules += New-AzNetworkSecurityRuleConfig `
-            -Name "AllowHTTPHTTPS" `
-            -Description "Incoming HTTP/S traffic" `
-            -Priority 400 `
-            -SourceAddressPrefix Internet `
-            -DestinationAddressPrefix GatewayManager `
-            -SourcePortRange * `
-            -DestinationPortRange 80,443 `
-            -Protocol TCP `
-            -Direction Inbound `
-            -Access Allow
-
-        Start-Sleep 3
-
         $frontendnsg = New-AzNetworkSecurityGroup `
             -ResourceGroupName $ResourceGroupName `
             -Location $Location `
-            -Name $frontendsubnetnsgname `
-            -SecurityRules $frontendnsgrules
+            -Name $frontendsubnetnsgname
 
         Start-Sleep 3
 
@@ -495,6 +479,7 @@ function  New-AzSecureApiManagement {
         $errorcount=0
         do {
             $errorcount++
+            Start-Sleep 30
             try {
                 Write-Host "Getting reference to Key Vault certificates"
                 $gatewaycert = Get-AzKeyVaultCertificate -VaultName $keyvaultname -Name $gatewaycertname
@@ -502,10 +487,10 @@ function  New-AzSecureApiManagement {
                 Write-Host "Getting Secret Id for certificate access"
                 $gatewaycertsecretid = $gatewaycert.SecretId.Replace($gatewaycert.Version, "")
                 $portalcertsecretid = $portalcert.SecretId.Replace($portalcert.Version, "")
-                return
+                break
             } catch {
-                Write-Error $_.Exception.InnerException.Message -ErrorAction Continue
-                Start-Sleep 60
+                Write-Error $_.Exception.Message -ErrorAction Continue
+                Write-Host "Retrying..."
             }
         } while ($errorcount -lt 10)
 
@@ -579,13 +564,24 @@ function  New-AzSecureApiManagement {
             -Location $Location `
             -ResourceGroupName $ResourceGroupName
 
-        Start-Sleep 3
-
-        Write-Host "Assigning key vault access policy for App GW User Assigned Managed Identity"
-        Set-AzKeyVaultAccessPolicy -VaultName $keyvaultname `
-            -PermissionsToSecrets get `
-            -PermissionsToCertificates get,create,list `
-            -ObjectId $appgwuseridentity.PrincipalId
+        $errorcount=0
+        do {
+            $errorcount++
+            Start-Sleep 30
+            try {
+                Write-Host "Getting User Assigned Managed Identity for application gateway"
+                $appgwuseridentity = Get-AzUserAssignedIdentity -Name $appgwname"identity" -ResourceGroupName $ResourceGroupName
+                Write-Host "Assigning key vault access policy for App GW User Assigned Managed Identity"
+                Set-AzKeyVaultAccessPolicy -VaultName $keyvaultname `
+                    -PermissionsToSecrets get `
+                    -PermissionsToCertificates get,create,list `
+                    -ObjectId $appgwuseridentity.PrincipalId
+                break
+            } catch {
+                Write-Error $_.Exception.Message -ErrorAction Continue
+                Write-Host "Retrying..."
+            }
+        } while ($errorcount -lt 10)
 
         Start-Sleep 3
 
