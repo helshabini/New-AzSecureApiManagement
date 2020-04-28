@@ -167,6 +167,7 @@ function  New-AzSecureApiManagement {
         $keyvaultname = "kv-" + $EnvironmentName + $Random
         $appgwname = "agw-" + $EnvironmentName + $Random
         $appgwpublicipname = "pip-" + $EnvironmentName + $Random
+        $appgwdnslabel = $EnvironmentName + $Random
         $backendsubnetnsgname = "nsg-BackendSubnet-" + $EnvironmentName + $Random
         $apimsubnetnsgname = "nsg-APIMSubnet-" + $EnvironmentName + $Random
         $frontendsubnetnsgname = "nsg-FrontendSubnet-" + $EnvironmentName + $Random
@@ -511,8 +512,44 @@ function  New-AzSecureApiManagement {
         Start-Sleep 3
 
         Write-Host "Adding certificates to Key Vault"
-        Add-AzKeyVaultCertificate -VaultName $keyvaultname -Name $gatewaycertname  -CertificatePolicy $gatewaypolicy
-        Add-AzKeyVaultCertificate -VaultName $keyvaultname -Name $portalcertname -CertificatePolicy $portalpolicy
+        if ($UseSelfSignedCertificates) {
+            Write-Host "Generating self-signed certificates"
+            try {
+                Add-AzKeyVaultCertificate `
+                    -VaultName $keyvaultname `
+                    -Name $gatewaycertname  `
+                    -CertificatePolicy $gatewaypolicy
+                Add-AzKeyVaultCertificate `
+                    -VaultName $keyvaultname `
+                    -Name $portalcertname `
+                    -CertificatePolicy $portalpolicy
+            }
+            catch {
+                Write-Error $_.Exception.Message -ErrorAction Continue
+                Write-Error "Could not generate certificates. Exiting..."
+                return
+            }
+        }
+        else {
+            Write-Host "Importing .pfx certificates"
+            try {
+                Import-AzureKeyVaultCertificate `
+                    -VaultName $keyvaultname `
+                    -Name $gatewaycertname `
+                    -FilePath $GatewayCertificate `
+                    -Password $GatewayCertificatePassword
+                Import-AzureKeyVaultCertificate `
+                    -VaultName $keyvaultname `
+                    -Name $portalcertname `
+                    -FilePath $PortalCertificate `
+                    -Password $PortalCertificatePassword
+            }
+            catch {
+                Write-Error $_.Exception.Message -ErrorAction Continue
+                Write-Error "Could not import certificates. Exiting..."
+                return
+            }
+        }
 
         Start-Sleep 3
         
@@ -635,7 +672,8 @@ function  New-AzSecureApiManagement {
             -name $appgwpublicipname `
             -Location $Location `
             -AlLocationMethod Static `
-            -Sku Standard
+            -Sku Standard `
+            -DomainNameLabel $appgwdnslabel
 
         Start-Sleep 3
 
