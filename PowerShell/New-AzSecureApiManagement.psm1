@@ -189,10 +189,12 @@ function  New-AzSecureApiManagement {
         $appgwportallistenername = "apimportallistener"
         $appgwapimgatewayprobename = "apimgatewayprobe"
         $appgwapimportalprobename = "apimportalprobe"
-        $appgwapimwhitelistcertname = "apimwhitelistcert"
+        $appgwapimwhitelistcertname = "apimwhitelist"
+        $appgwapimgatewaywhitelistcertname = "apimgatewaywhitelist"
+        $appgwapimportalwhitelistcertname = "apimportalwhitelist"
         $appgwapimbackendpoolname = "apimbackend"
-        $appgwapimgatewaysettingname = "apimgatewaybackendsetting"
-        $appgwapimportalsettingname = "apimportalbackendsetting"
+        $appgwapimgatewaysettingname = "apimgatewaysetting"
+        $appgwapimportalsettingname = "apimportalsetting"
         $appgwapimgatewayrulename = "apimgatewayrule"
         $appgwapimportalrulename = "apimportalrule"
 
@@ -499,21 +501,23 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
-        Write-Host "Creating certificates for gateway and portal"
-        $gatewaypolicy = New-AzKeyVaultCertificatePolicy `
-            -ValidityInMonths 12 `
-            -SubjectName "CN="$ApimGatewayHostname -IssuerName self `
-            -RenewAtNumberOfDaysBeforeExpiry 30
-        $portalpolicy = New-AzKeyVaultCertificatePolicy `
-            -ValidityInMonths 12 `
-            -SubjectName "CN="$ApimPortalHostname -IssuerName self `
-            -RenewAtNumberOfDaysBeforeExpiry 30
-    
-        Start-Sleep 3
-
         Write-Host "Adding certificates to Key Vault"
         if ($UseSelfSignedCertificates) {
+
             Write-Host "Generating self-signed certificates"
+            $gatewaypolicy = New-AzKeyVaultCertificatePolicy `
+                -ValidityInMonths 12 `
+                -SubjectName "CN="$ApimGatewayHostname -IssuerName self `
+                -RenewAtNumberOfDaysBeforeExpiry 30
+            $gatewaypolicy.Exportable = $true
+            $portalpolicy = New-AzKeyVaultCertificatePolicy `
+                -ValidityInMonths 12 `
+                -SubjectName "CN="$ApimPortalHostname -IssuerName self `
+                -RenewAtNumberOfDaysBeforeExpiry 30
+            $portalpolicy.Exportable = $true
+
+            Start-Sleep 3
+
             try {
                 Add-AzKeyVaultCertificate `
                     -VaultName $keyvaultname `
@@ -522,7 +526,7 @@ function  New-AzSecureApiManagement {
                 Add-AzKeyVaultCertificate `
                     -VaultName $keyvaultname `
                     -Name $portalcertname `
-                    -CertificatePolicy $portalpolicy
+                    -CertificatePolicy $portalpolicy                
             }
             catch {
                 Write-Error $_.Exception.Message -ErrorAction Continue
@@ -570,6 +574,13 @@ function  New-AzSecureApiManagement {
                 Write-Host "Retrying..."
             }
         } while ($errorcount -lt 10)
+
+        if ($UseSelfSignedCertificates) {
+            $GatewayCACert = "GatewayCA.cer"
+            [IO.File]::WriteAllBytes($GatewayCACert, $gatewaycert.Certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
+            $PortalCACert = "PortalCA.cer"
+            [IO.File]::WriteAllBytes($PortalCACert, $portalcert.Certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
+        }
 
         Start-Sleep 10
 
@@ -751,9 +762,9 @@ function  New-AzSecureApiManagement {
             -Timeout 300 `
             -UnhealthyThreshold 8
 
-        if ($IsWellKnownCA) {
-            Start-Sleep 3
+        Start-Sleep 3
 
+        if ($IsWellKnownCA) {
             $appgwapimgatewaysetting = New-AzApplicationGatewayBackendHttpSettings `
                 -Name $appgwapimgatewaysettingname `
                 -Port 443 `
@@ -770,9 +781,31 @@ function  New-AzSecureApiManagement {
                 -Probe $appgwapimportalprobe `
                 -RequestTimeout 180
         }
-        else {
-            Start-Sleep 3
+        elseif ($UseSelfSignedCertificates) {
+            $appgwapimgatewayauthcert = New-AzApplicationGatewayAuthenticationCertificate -Name $appgwapimgatewaywhitelistcertname -CertificateFile $GatewayCACert
+            $appgwapimportalauthcert = New-AzApplicationGatewayAuthenticationCertificate -Name $appgwapimportalwhitelistcertname -CertificateFile $PortalCACert
+        
+            Start-Sleep 3  
 
+            $appgwapimgatewaysetting = New-AzApplicationGatewayBackendHttpSettings `
+                -Name $appgwapimgatewaysettingname `
+                -Port 443 `
+                -Protocol "Https" `
+                -CookieBasedAffinity "Disabled" `
+                -Probe $appgwapimgatewayprobe `
+                -RequestTimeout 180 `
+                -AuthenticationCertificates $appgwapimgatewayauthcert
+
+            $appgwapimportalsetting = New-AzApplicationGatewayBackendHttpSettings `
+                -Name $appgwapimportalsettingname `
+                -Port 443 `
+                -Protocol "Https" `
+                -CookieBasedAffinity "Disabled" `
+                -Probe $appgwapimportalprobe `
+                -RequestTimeout 180 `
+                -AuthenticationCertificates $appgwapimportalauthcert
+        }
+        else {
             $appgwapimauthcert = New-AzApplicationGatewayAuthenticationCertificate -Name $appgwapimwhitelistcertname -CertificateFile $CACertificate
         
             Start-Sleep 3  
@@ -861,6 +894,25 @@ function  New-AzSecureApiManagement {
                 -SslCertificates $appgwgatewaysslcert, $appgwportalsslcert `
                 -Probes $appgwapimgatewayprobe, $appgwapimportalprobe
         }
+        elseif ($UseSelfSignedCertificates) {
+            $appgw = New-AzApplicationGateway `
+            -Name $appgwname `
+            -ResourceGroupName $ResourceGroupName `
+            -Location $Location `
+            -Identity $appgwidentity `
+            -BackendAddressPools $appgwapimbackendpool `
+            -BackendHttpSettingsCollection $appgwapimgatewaysetting, $appgwapimportalsetting  `
+            -FrontendIpConfigurations $appgwfrontendipconfig `
+            -GatewayIpConfigurations $appgwipconfig `
+            -FrontendPorts $appgwfrontendport `
+            -HttpListeners $appgwgatewaylistener, $appgwportallistener `
+            -RequestRoutingRules $appgwapimgatewayrule, $appgwapimportalrule `
+            -Sku $appgwsku `
+            -WebApplicationFirewallConfig $appgwwafconfig `
+            -SslCertificates $appgwgatewaysslcert, $appgwportalsslcert `
+            -Probes $appgwapimgatewayprobe, $appgwapimportalprobe `
+            -AuthenticationCertificates $appgwapimgatewayauthcert, $appgwapimportalauthcert
+        } 
         else {
             $appgw = New-AzApplicationGateway `
                 -Name $appgwname `
