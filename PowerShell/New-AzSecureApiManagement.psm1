@@ -920,7 +920,7 @@ function  New-AzSecureApiManagement {
             -WebApplicationFirewallConfig $appgwwafconfig `
             -SslCertificates $appgwgatewaysslcert, $appgwportalsslcert `
             -Probes $appgwapimgatewayprobe, $appgwapimportalprobe `
-            -AuthenticationCertificates $appgwapimgatewayrootcert, $appgwapimportalrootcert
+            -TrustedRootCertificate $appgwapimgatewayrootcert, $appgwapimportalrootcert
         } 
         else {
             $appgw = New-AzApplicationGateway `
