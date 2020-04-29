@@ -560,7 +560,7 @@ function  New-AzSecureApiManagement {
         $errorcount=0
         do {
             $errorcount++
-            Start-Sleep 10
+            Start-Sleep 30
             try {
                 Write-Host "Getting reference to Key Vault certificates"
                 $gatewaycert = Get-AzKeyVaultCertificate -VaultName $keyvaultname -Name $gatewaycertname
@@ -658,7 +658,7 @@ function  New-AzSecureApiManagement {
         $errorcount=0
         do {
             $errorcount++
-            Start-Sleep 10
+            Start-Sleep 30
             try {
                 Write-Host "Getting User Assigned Managed Identity for application gateway"
                 $appgwuseridentity = Get-AzUserAssignedIdentity -Name $appgwname"identity" -ResourceGroupName $ResourceGroupName
@@ -798,7 +798,6 @@ function  New-AzSecureApiManagement {
                 -Probe $appgwapimgatewayprobe `
                 -RequestTimeout 180 `
                 -TrustedRootCertificate $appgwapimgatewayrootcert `
-                -PickHostNameFromBackendAddress `
                 -HostName $ApimGatewayHostname
 
             $appgwapimportalsetting = New-AzApplicationGatewayBackendHttpSettings `
@@ -809,7 +808,6 @@ function  New-AzSecureApiManagement {
                 -Probe $appgwapimportalprobe `
                 -RequestTimeout 180 `
                 -TrustedRootCertificate $appgwapimportalrootcert `
-                -PickHostNameFromBackendAddress `
                 -HostName $ApimPortalHostname
         }
         else {
@@ -825,7 +823,6 @@ function  New-AzSecureApiManagement {
                 -Probe $appgwapimgatewayprobe `
                 -RequestTimeout 180 `
                 -TrustedRootCertificate $appgwapimrootcert `
-                -PickHostNameFromBackendAddress `
                 -HostName $ApimGatewayHostname
 
             $appgwapimportalsetting = New-AzApplicationGatewayBackendHttpSettings `
@@ -836,7 +833,6 @@ function  New-AzSecureApiManagement {
                 -Probe $appgwapimportalprobe `
                 -RequestTimeout 180 `
                 -TrustedRootCertificate $appgwapimrootcert `
-                -PickHostNameFromBackendAddress `
                 -HostName $ApimPortalHostname
         }
 
