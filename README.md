@@ -64,13 +64,13 @@ Import-Module .\New-AzSecureApiManagement.psm1
 * Create a new environment using self-signed certificates, these are created and signed by Key Vault. This is not recommended for a production environment.
 
 ```powershell
-New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -UseSelfSignedCertificates -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net" -IsWellKnownCA
+New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -UseSelfSignedCertificates -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net"
 ```
 
 * Create a new environment using self-signed certificates, these are created and signed by Key Vault, with custom virtual network configuration. This is not recommended for a production environment.
 
 ```powershell
-New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -VirtualNetworkCidr "10.0.0.0/23" -BackendSubnetCidr "10.0.0.0/24" -FrontendSubnetCidr "10.0.1.0/26" -ApimSubnetCidr "10.0.1.64/26" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -ApimSku "Developer" -ApimVpnType "Internal" -UseSelfSignedCertificates -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net" -IsWellKnownCA
+New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -VirtualNetworkCidr "10.0.0.0/23" -BackendSubnetCidr "10.0.0.0/24" -FrontendSubnetCidr "10.0.1.0/26" -ApimSubnetCidr "10.0.1.64/26" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -ApimSku "Developer" -ApimVpnType "Internal" -UseSelfSignedCertificates -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net"
 ```
 
 * Create a new environment using custom certificates purchased from a well-know CA (i.e. Thawte or Digicert or any other well-known CA).
