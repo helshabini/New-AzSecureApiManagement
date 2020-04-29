@@ -208,7 +208,7 @@ function  New-AzSecureApiManagement {
             $rg = New-AzResourceGroup -Name $ResourceGroupName -Location $Location
         }
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         Write-Host "Creating VNet"
         New-AzVirtualNetwork `
@@ -217,7 +217,7 @@ function  New-AzSecureApiManagement {
             -Name $vnetname `
             -AddressPrefix $VirtualNetworkCidr
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $clustervnet = Get-AzVirtualNetwork `
             -ResourceGroupName $ResourceGroupName `
@@ -228,7 +228,7 @@ function  New-AzSecureApiManagement {
             -Location $Location `
             -Name $backendsubnetnsgname
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         Add-AzVirtualNetworkSubnetConfig `
             -Name $backendsubnetname `
@@ -236,7 +236,7 @@ function  New-AzSecureApiManagement {
             -VirtualNetwork $clustervnet `
             -NetworkSecurityGroup $clusternsg
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $apimnsgrules = @()
         $apimnsgrules += New-AzNetworkSecurityRuleConfig `
@@ -407,7 +407,7 @@ function  New-AzSecureApiManagement {
             -Direction Inbound `
             -Access Allow
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $apimnsg = New-AzNetworkSecurityGroup `
             -ResourceGroupName $ResourceGroupName `
@@ -415,7 +415,7 @@ function  New-AzSecureApiManagement {
             -Name $apimsubnetnsgname `
             -SecurityRules $apimnsgrules
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         Add-AzVirtualNetworkSubnetConfig `
             -Name $apimsubnetname `
@@ -423,7 +423,7 @@ function  New-AzSecureApiManagement {
             -VirtualNetwork $clustervnet `
             -NetworkSecurityGroup $apimnsg
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $frontendnsgrules = @()
         $frontendnsgrules += New-AzNetworkSecurityRuleConfig `
@@ -462,7 +462,7 @@ function  New-AzSecureApiManagement {
             -Direction Inbound `
             -Access Allow
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $frontendnsg = New-AzNetworkSecurityGroup `
             -ResourceGroupName $ResourceGroupName `
@@ -470,7 +470,7 @@ function  New-AzSecureApiManagement {
             -Name $frontendsubnetnsgname `
             -SecurityRules $frontendnsgrules
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         Add-AzVirtualNetworkSubnetConfig `
             -Name $frontendsubnetname `
@@ -478,7 +478,7 @@ function  New-AzSecureApiManagement {
             -VirtualNetwork $clustervnet `
             -NetworkSecurityGroup $frontendnsg
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $clustervnet | Set-AzVirtualNetwork
 
@@ -486,7 +486,7 @@ function  New-AzSecureApiManagement {
             -ResourceGroupName $ResourceGroupName `
             -Name $vnetname
 
-        #Start-Sleep 10
+        Start-Sleep 10
 
         ############################################################################################
         ################## Creating Key Vault for Certificates
@@ -499,7 +499,7 @@ function  New-AzSecureApiManagement {
             -Location $Location `
             -EnableSoftDelete
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         Write-Host "Adding certificates to Key Vault"
         if ($UseSelfSignedCertificates) {
@@ -516,7 +516,7 @@ function  New-AzSecureApiManagement {
                 -RenewAtNumberOfDaysBeforeExpiry 30
             $portalpolicy.Exportable = $true
 
-            #Start-Sleep 3
+            Start-Sleep 3
 
             try {
                 Add-AzKeyVaultCertificate `
@@ -555,7 +555,7 @@ function  New-AzSecureApiManagement {
             }
         }
 
-        #Start-Sleep 3
+        Start-Sleep 3
         
         $errorcount=0
         do {
@@ -583,7 +583,7 @@ function  New-AzSecureApiManagement {
             [IO.File]::WriteAllBytes($PortalCACert, $portalcert.Certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
         }
 
-        #Start-Sleep 10
+        Start-Sleep 10
 
         ############################################################################################
         ################## Creating API Management
@@ -595,7 +595,7 @@ function  New-AzSecureApiManagement {
         $apimnetwork = New-AzApiManagementVirtualNetwork `
             -SubnetResourceId $apimsubnet.Id
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         Write-Host "Creating the API Management instance"
         $apim = New-AzApiManagement `
@@ -609,7 +609,9 @@ function  New-AzSecureApiManagement {
             -VpnType $ApimVpnType `
             -AssignIdentity
 
-        #Start-Sleep 10
+        Start-Sleep 10
+
+        $apim = Get-AzApiManagement -ResourceGroupName $ResourceGroupName -Name $apimname
 
         Write-Host "Assinging key vault access policy for APIM System Assigned Managed Identity"
         Set-AzKeyVaultAccessPolicy `
@@ -618,7 +620,7 @@ function  New-AzSecureApiManagement {
             -PermissionsToCertificates get,create,list `
             -ObjectId $apim.Identity.PrincipalId
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         Write-Host "Creating hostname configuration for the gateway and portal"
         $apimgatewayostnameconfig = New-AzApiManagementCustomHostnameConfiguration `
@@ -630,7 +632,7 @@ function  New-AzSecureApiManagement {
             -HostnameType DeveloperPortal `
             -KeyVaultId $portalcertsecretid
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         Write-Host "Setting hostname configuration on the APIM"
         $apim.ProxyCustomHostnameConfiguration = $apimgatewayostnameconfig
@@ -641,7 +643,7 @@ function  New-AzSecureApiManagement {
 
         $apim = Get-AzApiManagement -ResourceGroupName $ResourceGroupName -Name $apimname
 
-        #Start-Sleep 10
+        Start-Sleep 10
 
         ############################################################################################
         ################## Creating Application Gateway
@@ -672,7 +674,7 @@ function  New-AzSecureApiManagement {
             }
         } while ($errorcount -lt 10)
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         Write-Host "Assigning the User Assigned Managed Identity to the App Gateway"
         $appgwidentity = New-AzApplicationGatewayIdentity `
@@ -687,7 +689,7 @@ function  New-AzSecureApiManagement {
             -Sku Standard `
             -DomainNameLabel $appgwdnslabel
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $frontendsubnet = $clustervnet.Subnets | Where-Object { $_.Name -eq $frontendsubnetname }
 
@@ -695,31 +697,31 @@ function  New-AzSecureApiManagement {
             -Name $appgwipconfigname `
             -Subnet $frontendsubnet
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $appgwfrontendport = New-AzApplicationGatewayFrontendPort `
             -Name $appgwfrontendportname `
             -Port 443
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $appgwfrontendipconfig = New-AzApplicationGatewayFrontendIPConfig `
             -Name $appgwfrontendipconfigname `
             -PublicIPAddress $appgwpublicip
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $appgwgatewaysslcert = New-AzApplicationGatewaySslCertificate `
             -Name $gatewaycertname `
             -KeyVaultSecretId $gatewaycertsecretid
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $appgwportalsslcert = New-AzApplicationGatewaySslCertificate `
             -Name $portalcertname `
             -KeyVaultSecretId $portalcertsecretid
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $appgwgatewaylistener = New-AzApplicationGatewayHttpListener `
             -Name $appgwgatewaylistenername `
@@ -730,7 +732,7 @@ function  New-AzSecureApiManagement {
             -HostName $ApimGatewayHostname `
             -RequireServerNameIndication true
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $appgwportallistener = New-AzApplicationGatewayHttpListener `
             -Name $appgwportallistenername `
@@ -741,7 +743,7 @@ function  New-AzSecureApiManagement {
             -HostName $ApimPortalHostname `
             -RequireServerNameIndication true
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $appgwapimgatewayprobe = New-AzApplicationGatewayProbeConfig `
             -Name $appgwapimgatewayprobename `
@@ -752,7 +754,7 @@ function  New-AzSecureApiManagement {
             -Timeout 120 `
             -UnhealthyThreshold 8
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $appgwapimportalprobe = New-AzApplicationGatewayProbeConfig `
             -Name $appgwapimportalprobename `
@@ -763,7 +765,7 @@ function  New-AzSecureApiManagement {
             -Timeout 300 `
             -UnhealthyThreshold 8
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         if ($IsWellKnownCA) {
             $appgwapimgatewaysetting = New-AzApplicationGatewayBackendHttpSettings `
@@ -786,7 +788,7 @@ function  New-AzSecureApiManagement {
             $appgwapimgatewayrootcert = New-AzApplicationGatewayTrustedRootCertificate -Name $appgwapimgatewayrootcertname -CertificateFile $GatewayCACert
             $appgwapimportalrootcert = New-AzApplicationGatewayTrustedRootCertificate -Name $appgwapimportalrootcertname -CertificateFile $PortalCACert
         
-            #Start-Sleep 3  
+            Start-Sleep 3  
 
             $appgwapimgatewaysetting = New-AzApplicationGatewayBackendHttpSettings `
                 -Name $appgwapimgatewaysettingname `
@@ -813,7 +815,7 @@ function  New-AzSecureApiManagement {
         else {
             $appgwapimrootcert = New-AzApplicationGatewayTrustedRootCertificate -Name $appgwapimrootcertname -CertificateFile $CACertificate
         
-            #Start-Sleep 3  
+            Start-Sleep 3  
 
             $appgwapimgatewaysetting = New-AzApplicationGatewayBackendHttpSettings `
                 -Name $appgwapimgatewaysettingname `
@@ -838,7 +840,7 @@ function  New-AzSecureApiManagement {
                 -HostName $ApimPortalHostname
         }
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         if ($ApimVpnType -eq "Internal") {
             $appgwapimbackendpool = New-AzApplicationGatewayBackendAddressPool `
@@ -852,7 +854,7 @@ function  New-AzSecureApiManagement {
                 -BackendIPAddresses $apim.PublicIPAddresses[0]
         }
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $appgwapimgatewayrule = New-AzApplicationGatewayRequestRoutingRule `
             -Name $appgwapimgatewayrulename `
@@ -861,7 +863,7 @@ function  New-AzSecureApiManagement {
             -BackendAddressPool $appgwapimbackendpool `
             -BackendHttpSettings $appgwapimgatewaysetting
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $appgwapimportalrule = New-AzApplicationGatewayRequestRoutingRule `
             -Name $appgwapimportalrulename `
@@ -870,20 +872,20 @@ function  New-AzSecureApiManagement {
             -BackendAddressPool $appgwapimbackendpool `
             -BackendHttpSettings $appgwapimportalsetting
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $appgwsku = New-AzApplicationGatewaySku `
             -Name "WAF_v2" `
             -Tier "WAF_v2" `
             -Capacity $ApplicationGatewayCapacity
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         $appgwwafconfig = New-AzApplicationGatewayWebApplicationFirewallConfiguration `
             -Enabled $true `
             -FirewallMode "Prevention"
 
-        #Start-Sleep 3
+        Start-Sleep 3
 
         if ($IsWellKnownCA) {
             $appgw = New-AzApplicationGateway `
