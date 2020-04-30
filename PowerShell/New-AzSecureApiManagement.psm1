@@ -583,14 +583,14 @@ function  New-AzSecureApiManagement {
                             [System.Convert]::ToBase64String($gatewaycert.Certificate.RawData, 'InsertLineBreaks')
                             '-----END CERTIFICATE-----'
                         )
-            $GatewayCACertContent | Out-File -FilePath $GatewayCACert
+            $GatewayCACertContent | Out-File -FilePath $GatewayCACert -Encoding ascii
             $PortalCACert = "PortalCA.cer"
             $PortalCACertContent = @(
                             '-----BEGIN CERTIFICATE-----'
                             [System.Convert]::ToBase64String($portalcert.Certificate.RawData, 'InsertLineBreaks')
                             '-----END CERTIFICATE-----'
                         )
-            $PortalCACertContent | Out-File -FilePath $PortalCACert
+            $PortalCACertContent | Out-File -FilePath $PortalCACert -Encoding ascii
         }
 
         Start-Sleep 10
