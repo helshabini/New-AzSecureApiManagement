@@ -576,11 +576,21 @@ function  New-AzSecureApiManagement {
         } while ($errorcount -lt 10)
 
         if ($UseSelfSignedCertificates) {
-            Write-Host "Exporting Root CA Certificates"
+            Write-Host "Exporting Self-Signed Root CA Certificates"
             $GatewayCACert = "GatewayCA.cer"
-            [IO.File]::WriteAllBytes($GatewayCACert, $gatewaycert.Certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
+            $GatewayCACertContent = @(
+                            '-----BEGIN CERTIFICATE-----'
+                            [System.Convert]::ToBase64String($gatewaycert.Certificate.RawData, 'InsertLineBreaks')
+                            '-----END CERTIFICATE-----'
+                        )
+            $GatewayCACertContent | Out-File -FilePath $GatewayCACert
             $PortalCACert = "PortalCA.cer"
-            [IO.File]::WriteAllBytes($PortalCACert, $portalcert.Certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
+            $PortalCACertContent = @(
+                            '-----BEGIN CERTIFICATE-----'
+                            [System.Convert]::ToBase64String($portalcert.Certificate.RawData, 'InsertLineBreaks')
+                            '-----END CERTIFICATE-----'
+                        )
+            $PortalCACertContent | Out-File -FilePath $PortalCACert
         }
 
         Start-Sleep 10
