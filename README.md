@@ -19,9 +19,8 @@ The aim of this setup is to automate the process of environment creation, accord
   * **APIM subnet**: Hosts the Azure API Management resource
   * **Frontend subnet**: Hosts the Application Gateway resource
 * The Key Vault resource hosts the certificates, there are 3 different scenarios which this script supports
-  * **Using self-signed certificates**: For development purposes, you might want to rely on Key Vault for self-signing the two certificates for this setup
   * **Using Certificates from a public well-known CA**: For production environment where the APIs are intended to be used externally. For example, in cases when the APIs and the APIM development portal are to be used by third-parties, mobile or web applications, and access publicly
-  * **Using Certificates from a private CA**: For development or production environments where the APIs are intended to be used internally. Such as in internal application, or consumption via a tool which trusts the same CA
+  * **Using Certificates from a private CA**: For development or production environments where the APIs are intended to be used internally. Such as in internal application, or consumption via a tool which trusts the same CA. You can use the provided *New-SecureAzApiManagementSelfSignedCerts* to create the self-signed certificates for a development environment scenario
 * The API Management resource is setup in either *Internal* or *External* VPN Types. For more information about the difference between the two, please refer to this [docs article](https://docs.microsoft.com/en-us/azure/api-management/api-management-using-with-internal-vnet)
 * The Application Gateway resource is setup with an SKU of *WAF_v2* and the WAF component is enabled by default in *Prevention* mode. This resource is intended to securely proxy traffic back to the APIM resource. However, there is nothing to prevent you for adding more Listeners, Rules, and Backends to expose any additional services in your Backend subnet or any other subnet you create later
 
@@ -61,18 +60,6 @@ Import-Module .\New-AzSecureApiManagement.psm1
 
 ## Examples
 
-* Create a new environment using self-signed certificates, these are created and signed by Key Vault. This is not recommended for a production environment.
-
-```powershell
-New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -UseSelfSignedCertificates -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net"
-```
-
-* Create a new environment using self-signed certificates, these are created and signed by Key Vault, with custom virtual network configuration. This is not recommended for a production environment.
-
-```powershell
-New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -VirtualNetworkCidr "10.0.0.0/23" -BackendSubnetCidr "10.0.0.0/24" -FrontendSubnetCidr "10.0.1.0/26" -ApimSubnetCidr "10.0.1.64/26" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -ApimSku "Developer" -ApimVpnType "Internal" -UseSelfSignedCertificates -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net"
-```
-
 * Create a new environment using custom certificates purchased from a well-know CA (i.e. Thawte or Digicert or any other well-known CA).
 
 ```powershell
@@ -82,13 +69,18 @@ New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEur
 * Create a new environment using custom certificates purchased a privately owned CA.
 
 ```powershell
-New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -VirtualNetworkCidr "10.0.0.0/23" -BackendSubnetCidr "10.0.0.0/24" -FrontendSubnetCidr "10.0.1.0/26" -ApimSubnetCidr "10.0.1.64/26" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -ApimSku "Premium" -ApimVpnType "Internal" -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net" -CACertificate "cacert.cer" -GatewayCertificate "gatewaycertificate.pfx" -GatewayCertificatePassword (ConvertTo-SecureString -AsPlainText -String "certpassword") -PortalCertificate "portalcertificate.pfx" -PortalCertificatePassword (ConvertTo-SecureString -AsPlainText -String "certpassword")
+New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -VirtualNetworkCidr "10.0.0.0/23" -BackendSubnetCidr "10.0.0.0/24" -FrontendSubnetCidr "10.0.1.0/26" -ApimSubnetCidr "10.0.1.64/26" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -ApimSku "Premium" -ApimVpnType "Internal" -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net" -CACertificate "cacert.cer" -GatewayCertificate "api.pfx" -GatewayCertificatePassword (ConvertTo-SecureString -AsPlainText -String "certpassword") -PortalCertificate "portal.pfx" -PortalCertificatePassword (ConvertTo-SecureString -AsPlainText -String "certpassword")
+```
+
+* Creating a set of self-signed certificates for publishing API Management internally
+
+```powershell
+New-SecureAzApiManagementSelfSignedCerts -Country "US" -State "WA" -City "Redmond" -Company "contoso.net" -Department "IT" -GatewayHostname "api.contoso.net" -PortalHostname "portal.contoso.net" -GatewayCertificatePassword "certpassword" -PortalCertificatePassword "certpassword"
 ```
 
 ## To-do List
 
 * Create ARM Template to install the same setup using ARM
-* Create az cli script to install the same setup (currently blocked by az apim module not being ready)
 * Add functionality for installing Kubernetes in the backend subnet
 * Add functionality for installing monitoring services (Application Insights and Log Analytics)
 * Add better error handling, debugging information
