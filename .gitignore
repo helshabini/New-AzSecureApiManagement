@@ -1,2 +1,12 @@
-PortalCA.cer
-GatewayCA.cer
+api.key
+api.pem
+api.pfx
+api.req
+cacert.cer
+cacert.key
+cacert.pem
+cacert.srl
+portal.key
+portal.pem
+portal.pfx
+portal.req

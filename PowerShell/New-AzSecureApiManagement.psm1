@@ -1,3 +1,92 @@
+function  New-SecureAzApiManagementSelfSignedCerts {
+    <#
+    .SYNOPSIS
+        Creates a root CA and set of self-signed certificates for use in API Management publishing in Dev/Test environments
+    .DESCRIPTION
+        This function creates the following components:
+        - cacert.cer: Root CA Certificate
+        - api.pfx: Gateway Cert with Private Key
+        - portal.pfx: Portal Cert with Private Key
+        The function requires OpenSSL to be installed on the system:
+        - For Windows: "choco install openssl" (requires Chocolatey package manager from Chocolatey.org)
+        - For MacOs: "brew install openssl" (requires Homebrew package manager from brew.sh)
+        - For Linux (Debian): "apt-get install openssl"
+        - For Linux (RHEL): "yum install openssl"
+    .EXAMPLE
+        Create a new environment using self-signed certificates, these are created and signed by Key Vault. This is not recommended for a production environment.
+        
+        New-SecureAzApiManagementSelfSignedCerts -Country "US" -State "WA" -City "Redmond" -Company "contoso.net" -Department "IT" -GatewayHostname "api.contoso.net" -PortalHostname "portal.contoso.net" -GatewayCertificatePassword "certpassword" -PortalCertificatePassword "certpassword"
+    .LINK
+        https://github.com/helshabini/New-AzSecureApiManagement
+    #>
+    param(
+        [Parameter(Position=0,
+        Mandatory=$True, 
+        ValueFromPipeline=$False)]
+        [String]$Country,
+
+        [Parameter(Position=1,
+        Mandatory=$True, 
+        ValueFromPipeline=$False)]
+        [String]$State,
+
+        [Parameter(Position=2,
+        Mandatory=$True, 
+        ValueFromPipeline=$False)]
+        [String]$City,
+
+        [Parameter(Position=3,
+        Mandatory=$True, 
+        ValueFromPipeline=$False)]
+        [String]$Company,
+
+        [Parameter(Position=4,
+        Mandatory=$True, 
+        ValueFromPipeline=$False)]
+        [String]$Department,
+
+        [Parameter(Position=5,
+        Mandatory=$True, 
+        ValueFromPipeline=$False)]
+        [String]$GatewayHostname,
+
+        [Parameter(Position=6,
+        Mandatory=$True, 
+        ValueFromPipeline=$False)]
+        [String]$PortalHostname,
+
+        [Parameter(Position=7,
+        Mandatory=$True, 
+        ValueFromPipeline=$False)]
+        [String]$GatewayCertificatePassword,
+
+        [Parameter(Position=8,
+        Mandatory=$True, 
+        ValueFromPipeline=$False)]
+        [String]$PortalCertificatePassword
+    )
+    process {
+        Invoke-Command -ScriptBlock {openssl genrsa -out cacert.key 4096}
+        $rootsubject = "/C={0}/ST={1}/L={2}/O={3}/OU={4}/CN={5}" -f $Country, $State, $City, $Company, $Department, $Company
+        Invoke-Command -ScriptBlock {openssl req -x509 -new -nodes -key cacert.key -days 3650 -out cacert.pem -subj $rootsubject}
+        Invoke-Command -ScriptBlock {openssl x509 -inform PEM -in cacert.pem -outform DER -out cacert.cer}
+
+        Invoke-Command -ScriptBlock {openssl genrsa -out api.key 4096}
+        $apisubject = "/C={0}/ST={1}/L={2}/O={3}/OU={4}/CN={5}" -f $Country, $State, $City, $Company, $Department, $GatewayHostname
+        Invoke-Command -ScriptBlock {openssl req -new -key api.key -out api.req  -subj $apisubject}
+
+        Invoke-Command -ScriptBlock {openssl genrsa -out portal.key 4096}
+        $portalsubject = "/C={0}/ST={1}/L={2}/O={3}/OU={4}/CN={5}" -f $Country, $State, $City, $Company, $Department, $PortalHostname
+        Invoke-Command -ScriptBlock {openssl req -new -key portal.key -out portal.req  -subj $portalsubject}
+
+        Invoke-Command -ScriptBlock {openssl x509 -req -in api.req -CA cacert.pem -CAkey cacert.key -CAcreateserial -out api.pem -days 3650}
+        Invoke-Command -ScriptBlock {openssl x509 -req -in portal.req -CA cacert.pem -CAkey cacert.key -CAcreateserial -out portal.pem -days 3650}
+
+        Invoke-Command -ScriptBlock {openssl pkcs12 -export -inkey api.key -in api.pem -out api.pfx -password pass:$GatewayCertificatePassword}
+        Invoke-Command -ScriptBlock {openssl pkcs12 -export -inkey portal.key -in portal.pem -out portal.pfx -password pass:$PortalCertificatePassword}
+    }
+}
+
 function  New-AzSecureApiManagement {
     <#
     .SYNOPSIS
@@ -13,21 +102,13 @@ function  New-AzSecureApiManagement {
         - Application Gateway with Web Application Firewall component. The Application Gateway is configured to proxy traffic listened for on the Public IP Address with the specified hostnames to the API Management backend
         - Application Gateway User Managed Identity, to allow the Application Gateway to grab certificates from Key Vault
     .EXAMPLE
-        Create a new environment using self-signed certificates, these are created and signed by Key Vault. This is not recommended for a production environment.
-        
-        New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -UseSelfSignedCertificates -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net"
-    .EXAMPLE
-        Creates a new environment using self-signed certificates, these are created and signed by Key Vault. This is not recommended for a production environment.
-
-        New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -VirtualNetworkCidr "10.0.0.0/23" -BackendSubnetCidr "10.0.0.0/24" -FrontendSubnetCidr "10.0.1.0/26" -ApimSubnetCidr "10.0.1.64/26" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -ApimSku "Developer" -ApimVpnType "Internal" -UseSelfSignedCertificates -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net"
-    .EXAMPLE
         Creates a new environment using custom certificates purchased from a well-know CA (i.e. Thawte or Digicert or any other well-known CA).
 
         New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -VirtualNetworkCidr "10.0.0.0/23" -BackendSubnetCidr "10.0.0.0/24" -FrontendSubnetCidr "10.0.1.0/26" -ApimSubnetCidr "10.0.1.64/26" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -ApimSku "Premium" -ApimVpnType "External" -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net" -IsWellKnownCA -GatewayCertificate "gatewaycertificate.pfx" -GatewayCertificatePassword (ConvertTo-SecureString -AsPlainText -String "certpassword") -PortalCertificate "portalcertificate.pfx" -PortalCertificatePassword (ConvertTo-SecureString -AsPlainText -String "certpassword")
     .EXAMPLE
         Creates a new environment using custom certificates purchased a privately owned CA.
         
-        New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -VirtualNetworkCidr "10.0.0.0/23" -BackendSubnetCidr "10.0.0.0/24" -FrontendSubnetCidr "10.0.1.0/26" -ApimSubnetCidr "10.0.1.64/26" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -ApimSku "Premium" -ApimVpnType "Internal" -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net" -CACertificate "cacert.cer" -GatewayCertificate "gatewaycertificate.pfx" -GatewayCertificatePassword (ConvertTo-SecureString -AsPlainText -String "certpassword") -PortalCertificate "portalcertificate.pfx" -PortalCertificatePassword (ConvertTo-SecureString -AsPlainText -String "certpassword")
+        New-AzSecureApiManagement -ResourceGroupName "MyResouceGroup" -Location "WestEurope" -EnvironmentName "MyNewEnvironment" -VirtualNetworkCidr "10.0.0.0/23" -BackendSubnetCidr "10.0.0.0/24" -FrontendSubnetCidr "10.0.1.0/26" -ApimSubnetCidr "10.0.1.64/26" -ApimOrganizationName "MyOrganization" -ApimOrganizationEmail "myorg@email.com" -ApimSku "Premium" -ApimVpnType "Internal" -ApimGatewayHostname "api.contoso.net" -ApimPortalHostname "portal.contoso.net" -CACertificate "cacert.cer" -GatewayCertificate "api.pfx" -GatewayCertificatePassword (ConvertTo-SecureString -AsPlainText -String "certpassword") -PortalCertificate "portal.pfx" -PortalCertificatePassword (ConvertTo-SecureString -AsPlainText -String "certpassword")
     .LINK
         https://github.com/helshabini/New-AzSecureApiManagement
     #>
@@ -89,72 +170,65 @@ function  New-AzSecureApiManagement {
         [String]$ApimVpnType="External",
 
         [Parameter(Position=11,
-        Mandatory=$False, 
-        ValueFromPipeline=$False)]
-        [Switch]$UseSelfSignedCertificates=$False,
-
-        [Parameter(Position=12,
         Mandatory=$True, 
         ValueFromPipeline=$False)]
         [String]$ApimGatewayHostname,
 
-        [Parameter(Position=13,
+        [Parameter(Position=12,
         Mandatory=$True, 
         ValueFromPipeline=$False)]
         [String]$ApimPortalHostname,
 
-        [Parameter(Position=14,
+        [Parameter(Position=13,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
         [Switch]$IsWellKnownCA=$False,
 
-        [Parameter(Position=15,
+        [Parameter(Position=14,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
         [String]$CACertificate,
 
-        [Parameter(Position=16,
+        [Parameter(Position=15,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
         [String]$GatewayCertificate,
         
-        [Parameter(Position=17,
+        [Parameter(Position=16,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
         [String]$PortalCertificate,
 
-        [Parameter(Position=18,
+        [Parameter(Position=17,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
         [SecureString]$GatewayCertificatePassword,
 
-        [Parameter(Position=19,
+        [Parameter(Position=18,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
         [SecureString]$PortalCertificatePassword,
 
-        [Parameter(Position=20,
+        [Parameter(Position=19,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
         [Int]$ApplicationGatewayCapacity=2
     )
     begin {
-        if ($UseSelfSignedCertificates -eq $False) {
-            if (-not (Test-Path -Path $GatewayCertificate -PathType Leaf -Include "*.pfx")) {
-                Write-Error "Gateway certificate must be a valid .pfx file."
-            }
-            if (-not (Test-Path -Path $PortalCertificate -PathType Leaf -Include "*.pfx")) {
-                Write-Error "Portal certificate must be a valid .pfx file."
-            }
-            if ([string]::IsNullOrEmpty($GatewayCertificatePassword)) {
-                Write-Error "Gateway certificate password must be provided."
-            }
-            if ([string]::IsNullOrEmpty($PortalCertificatePassword)) {
-                Write-Error "Portal certificate password must be provided."
-            }
-            if (-not $IsWellKnownCA -and -not (Test-Path -Path $CACertificate -PathType Leaf -Include "*.cer")) {
-                Write-Error "CA certificate must be a valid .cer file. If you are using certificates from a well known CA, use the -IsWellKnownCA switch."
-            }
+        if (-not (Test-Path -Path $GatewayCertificate -PathType Leaf -Include "*.pfx")) {
+            Write-Error "Gateway certificate must be a valid .pfx file."
+        }
+        if (-not (Test-Path -Path $PortalCertificate -PathType Leaf -Include "*.pfx")) {
+            Write-Error "Portal certificate must be a valid .pfx file."
+        }
+        if ([string]::IsNullOrEmpty($GatewayCertificatePassword)) {
+            Write-Error "Gateway certificate password must be provided."
+        }
+        if ([string]::IsNullOrEmpty($PortalCertificatePassword)) {
+            Write-Error "Portal certificate password must be provided."
+        }
+        if (-not $IsWellKnownCA -and -not (Test-Path -Path $CACertificate -PathType Leaf -Include "*.cer")) {
+            Write-Error "CA certificate must be a valid .cer file. If you are using certificates from a well known CA, use the -IsWellKnownCA switch."
         }
         
         Install-Module -Name Az.ManagedServiceIdentity -Scope CurrentUser -AllowClobber -Force
@@ -496,63 +570,27 @@ function  New-AzSecureApiManagement {
         New-AzKeyVault `
             -Name $keyvaultname `
             -ResourceGroupName $ResourceGroupName `
-            -Location $Location `
-            -EnableSoftDelete
+            -Location $Location
 
         Start-Sleep 3
 
-        Write-Host "Adding certificates to Key Vault"
-        if ($UseSelfSignedCertificates) {
-
-            Write-Host "Generating self-signed certificates"
-            $gatewaypolicy = New-AzKeyVaultCertificatePolicy `
-                -ValidityInMonths 12 `
-                -SubjectName "CN="$ApimGatewayHostname -IssuerName self `
-                -RenewAtNumberOfDaysBeforeExpiry 30
-            $gatewaypolicy.Exportable = $true
-            $portalpolicy = New-AzKeyVaultCertificatePolicy `
-                -ValidityInMonths 12 `
-                -SubjectName "CN="$ApimPortalHostname -IssuerName self `
-                -RenewAtNumberOfDaysBeforeExpiry 30
-            $portalpolicy.Exportable = $true
-
-            Start-Sleep 3
-
-            try {
-                Add-AzKeyVaultCertificate `
-                    -VaultName $keyvaultname `
-                    -Name $gatewaycertname  `
-                    -CertificatePolicy $gatewaypolicy
-                Add-AzKeyVaultCertificate `
-                    -VaultName $keyvaultname `
-                    -Name $portalcertname `
-                    -CertificatePolicy $portalpolicy                
-            }
-            catch {
-                Write-Error $_.Exception.Message -ErrorAction Continue
-                Write-Error "Could not generate certificates. Exiting..."
-                return
-            }
+        Write-Host "Importing .pfx certificates"
+        try {
+            Import-AzKeyVaultCertificate `
+                -VaultName $keyvaultname `
+                -Name $gatewaycertname `
+                -FilePath $GatewayCertificate `
+                -Password $GatewayCertificatePassword
+            Import-AzKeyVaultCertificate `
+                -VaultName $keyvaultname `
+                -Name $portalcertname `
+                -FilePath $PortalCertificate `
+                -Password $PortalCertificatePassword
         }
-        else {
-            Write-Host "Importing .pfx certificates"
-            try {
-                Import-AzureKeyVaultCertificate `
-                    -VaultName $keyvaultname `
-                    -Name $gatewaycertname `
-                    -FilePath $GatewayCertificate `
-                    -Password $GatewayCertificatePassword
-                Import-AzureKeyVaultCertificate `
-                    -VaultName $keyvaultname `
-                    -Name $portalcertname `
-                    -FilePath $PortalCertificate `
-                    -Password $PortalCertificatePassword
-            }
-            catch {
-                Write-Error $_.Exception.Message -ErrorAction Continue
-                Write-Error "Could not import certificates. Exiting..."
-                return
-            }
+        catch {
+            Write-Error $_.Exception.Message -ErrorAction Continue
+            Write-Error "Could not import certificates. Exiting..."
+            return
         }
 
         Start-Sleep 3
@@ -574,24 +612,6 @@ function  New-AzSecureApiManagement {
                 Write-Host "Retrying..."
             }
         } while ($errorcount -lt 10)
-
-        if ($UseSelfSignedCertificates) {
-            Write-Host "Exporting Self-Signed Root CA Certificates"
-            $GatewayCACert = "GatewayCA.cer"
-            $GatewayCACertContent = @(
-                            '-----BEGIN CERTIFICATE-----'
-                            [System.Convert]::ToBase64String($gatewaycert.Certificate.RawData, 'InsertLineBreaks')
-                            '-----END CERTIFICATE-----'
-                        )
-            $GatewayCACertContent | Out-File -FilePath $GatewayCACert -Encoding ascii
-            $PortalCACert = "PortalCA.cer"
-            $PortalCACertContent = @(
-                            '-----BEGIN CERTIFICATE-----'
-                            [System.Convert]::ToBase64String($portalcert.Certificate.RawData, 'InsertLineBreaks')
-                            '-----END CERTIFICATE-----'
-                        )
-            $PortalCACertContent | Out-File -FilePath $PortalCACert -Encoding ascii
-        }
 
         Start-Sleep 10
 
@@ -617,7 +637,7 @@ function  New-AzSecureApiManagement {
             -VirtualNetwork $apimnetwork `
             -Sku $ApimSku `
             -VpnType $ApimVpnType `
-            -AssignIdentity
+            -SystemAssignedIdentity
 
         Start-Sleep 10
 
@@ -794,32 +814,6 @@ function  New-AzSecureApiManagement {
                 -Probe $appgwapimportalprobe `
                 -RequestTimeout 180
         }
-        elseif ($UseSelfSignedCertificates) {
-            $appgwapimgatewayrootcert = New-AzApplicationGatewayTrustedRootCertificate -Name $appgwapimgatewayrootcertname -CertificateFile $GatewayCACert
-            $appgwapimportalrootcert = New-AzApplicationGatewayTrustedRootCertificate -Name $appgwapimportalrootcertname -CertificateFile $PortalCACert
-        
-            Start-Sleep 3  
-
-            $appgwapimgatewaysetting = New-AzApplicationGatewayBackendHttpSettings `
-                -Name $appgwapimgatewaysettingname `
-                -Port 443 `
-                -Protocol "Https" `
-                -CookieBasedAffinity "Disabled" `
-                -Probe $appgwapimgatewayprobe `
-                -RequestTimeout 180 `
-                -TrustedRootCertificate $appgwapimgatewayrootcert `
-                -HostName $ApimGatewayHostname
-
-            $appgwapimportalsetting = New-AzApplicationGatewayBackendHttpSettings `
-                -Name $appgwapimportalsettingname `
-                -Port 443 `
-                -Protocol "Https" `
-                -CookieBasedAffinity "Disabled" `
-                -Probe $appgwapimportalprobe `
-                -RequestTimeout 180 `
-                -TrustedRootCertificate $appgwapimportalrootcert `
-                -HostName $ApimPortalHostname
-        }
         else {
             $appgwapimrootcert = New-AzApplicationGatewayTrustedRootCertificate -Name $appgwapimrootcertname -CertificateFile $CACertificate
         
@@ -911,25 +905,6 @@ function  New-AzSecureApiManagement {
                 -SslCertificates $appgwgatewaysslcert, $appgwportalsslcert `
                 -Probes $appgwapimgatewayprobe, $appgwapimportalprobe
         }
-        elseif ($UseSelfSignedCertificates) {
-            $appgw = New-AzApplicationGateway `
-            -Name $appgwname `
-            -ResourceGroupName $ResourceGroupName `
-            -Location $Location `
-            -Identity $appgwidentity `
-            -BackendAddressPools $appgwapimbackendpool `
-            -BackendHttpSettingsCollection $appgwapimgatewaysetting, $appgwapimportalsetting  `
-            -FrontendIpConfigurations $appgwfrontendipconfig `
-            -GatewayIpConfigurations $appgwipconfig `
-            -FrontendPorts $appgwfrontendport `
-            -HttpListeners $appgwgatewaylistener, $appgwportallistener `
-            -RequestRoutingRules $appgwapimgatewayrule, $appgwapimportalrule `
-            -Sku $appgwsku `
-            -WebApplicationFirewallConfig $appgwwafconfig `
-            -SslCertificates $appgwgatewaysslcert, $appgwportalsslcert `
-            -Probes $appgwapimgatewayprobe, $appgwapimportalprobe `
-            -TrustedRootCertificate $appgwapimgatewayrootcert, $appgwapimportalrootcert
-        } 
         else {
             $appgw = New-AzApplicationGateway `
                 -Name $appgwname `
@@ -956,4 +931,5 @@ function  New-AzSecureApiManagement {
     }
 }
 
+Export-ModuleMember -Function New-SecureAzApiManagementSelfSignedCerts
 Export-ModuleMember -Function New-AzSecureApiManagement

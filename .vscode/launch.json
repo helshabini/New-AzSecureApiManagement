@@ -10,6 +10,11 @@
             "request": "launch",
             "script": "${workspaceFolder}\\PowerShell\\debugscript.ps1",
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Local Process with Kubernetes (Preview)",
+            "type": "dev-spaces-connect-configuration",
+            "request": "launch"
         }
     ]
 }
