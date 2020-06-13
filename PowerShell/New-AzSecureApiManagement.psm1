@@ -721,31 +721,34 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
+        Write-Host "Getting reference to the frontend subnet"
         $frontendsubnet = $clustervnet.Subnets | Where-Object { $_.Name -eq $frontendsubnetname }
 
+        Write-Host "Creating Internal IP Config for App Gateway"
         $appgwipconfig = New-AzApplicationGatewayIPConfiguration `
             -Name $appgwipconfigname `
             -Subnet $frontendsubnet
 
         Start-Sleep 3
 
+        Write-Host "Creating Port Config for App Gateway"
         $appgwfrontendport = New-AzApplicationGatewayFrontendPort `
             -Name $appgwfrontendportname `
             -Port 443
 
         Start-Sleep 3
 
+        Write-Host "Creating Public IP Config for App Gateway"
         $appgwfrontendipconfig = New-AzApplicationGatewayFrontendIPConfig `
             -Name $appgwfrontendipconfigname `
             -PublicIPAddress $appgwpublicip
 
         Start-Sleep 3
 
+        Write-Host "Creating SSL Certificate Config for App Gateway"
         $appgwgatewaysslcert = New-AzApplicationGatewaySslCertificate `
             -Name $gatewaycertname `
             -KeyVaultSecretId $gatewaycertsecretid
-
-        Start-Sleep 3
 
         $appgwportalsslcert = New-AzApplicationGatewaySslCertificate `
             -Name $portalcertname `
@@ -753,6 +756,7 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
+        Write-Host "Creating the Gateway HTTP Listener"
         $appgwgatewaylistener = New-AzApplicationGatewayHttpListener `
             -Name $appgwgatewaylistenername `
             -Protocol "Https" `
@@ -764,6 +768,7 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
+        Write-Host "Creating the Portal HTTP Listener"
         $appgwportallistener = New-AzApplicationGatewayHttpListener `
             -Name $appgwportallistenername `
             -Protocol "Https" `
@@ -775,6 +780,7 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
+        Write-Host "Creating Gateway Health Probe"
         $appgwapimgatewayprobe = New-AzApplicationGatewayProbeConfig `
             -Name $appgwapimgatewayprobename `
             -Protocol "Https" `
@@ -786,6 +792,7 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
+        Write-Host "Creating Portal Health Probe"
         $appgwapimportalprobe = New-AzApplicationGatewayProbeConfig `
             -Name $appgwapimportalprobename `
             -Protocol "Https" `
@@ -797,8 +804,9 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
+        Write-Host "Creating HTTP Settings"
         if ($IsWellKnownCA) {
-            $appgwapimgatewaysetting = New-AzApplicationGatewayBackendHttpSettings `
+            $appgwapimgatewaysetting = New-AzApplicationGatewayBackendHttpSetting `
                 -Name $appgwapimgatewaysettingname `
                 -Port 443 `
                 -Protocol "Https" `
@@ -806,7 +814,7 @@ function  New-AzSecureApiManagement {
                 -Probe $appgwapimgatewayprobe `
                 -RequestTimeout 180
 
-            $appgwapimportalsetting = New-AzApplicationGatewayBackendHttpSettings `
+            $appgwapimportalsetting = New-AzApplicationGatewayBackendHttpSetting `
                 -Name $appgwapimportalsettingname `
                 -Port 443 `
                 -Protocol "Https" `
@@ -819,7 +827,7 @@ function  New-AzSecureApiManagement {
         
             Start-Sleep 3  
 
-            $appgwapimgatewaysetting = New-AzApplicationGatewayBackendHttpSettings `
+            $appgwapimgatewaysetting = New-AzApplicationGatewayBackendHttpSetting `
                 -Name $appgwapimgatewaysettingname `
                 -Port 443 `
                 -Protocol "Https" `
@@ -829,7 +837,7 @@ function  New-AzSecureApiManagement {
                 -TrustedRootCertificate $appgwapimrootcert `
                 -HostName $ApimGatewayHostname
 
-            $appgwapimportalsetting = New-AzApplicationGatewayBackendHttpSettings `
+            $appgwapimportalsetting = New-AzApplicationGatewayBackendHttpSetting `
                 -Name $appgwapimportalsettingname `
                 -Port 443 `
                 -Protocol "Https" `
@@ -842,6 +850,7 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
+        Write-Host "Creating backend pool"
         if ($ApimVpnType -eq "Internal") {
             $appgwapimbackendpool = New-AzApplicationGatewayBackendAddressPool `
                 -Name $appgwapimbackendpoolname `
@@ -856,6 +865,7 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
+        Write-Host "Creating routing rules config for gateway"
         $appgwapimgatewayrule = New-AzApplicationGatewayRequestRoutingRule `
             -Name $appgwapimgatewayrulename `
             -RuleType Basic `
@@ -865,6 +875,7 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
+        Write-Host "Creating routing rules config for portal"
         $appgwapimportalrule = New-AzApplicationGatewayRequestRoutingRule `
             -Name $appgwapimportalrulename `
             -RuleType Basic `
@@ -887,6 +898,7 @@ function  New-AzSecureApiManagement {
 
         Start-Sleep 3
 
+        Write-Host "Creating Application Gateway"
         if ($IsWellKnownCA) {
             $appgw = New-AzApplicationGateway `
                 -Name $appgwname `
