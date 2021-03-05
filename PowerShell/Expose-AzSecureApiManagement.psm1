@@ -839,5 +839,4 @@ function  Expose-AzSecureApiManagement {
     }
 }
 
-Export-ModuleMember -Function New-SecureAzApiManagementSelfSignedCerts
-Export-ModuleMember -Function New-AzSecureApiManagement
+Export-ModuleMember -Function Expose-AzSecureApiManagement
