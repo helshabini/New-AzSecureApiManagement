@@ -123,7 +123,12 @@ function  Expose-AzSecureApiManagement {
         [Parameter(Position=19,
         Mandatory=$False, 
         ValueFromPipeline=$False)]
-        [Int]$ApplicationGatewayCapacity=2
+        [Int]$ApplicationGatewayCapacity=2,
+
+        [Parameter(Position=20,
+        Mandatory=$False, 
+        ValueFromPipeline=$False)]
+        [Int]$ExistingEnvId=0
     )
     begin {
         if (-not (Test-Path -Path $GatewayCertificate -PathType Leaf -Include "*.pfx")) {
@@ -146,7 +151,12 @@ function  Expose-AzSecureApiManagement {
     }
     process {
         #Resource names
-        $Random = Get-Random -Maximum 9999
+        if ($ExistingEnvId == 0) {
+            $Random = Get-Random -Maximum 9999
+        }
+        else {
+            $Random = $ExistingEnvId
+        }
         $vnetname = "vnet-" + $EnvironmentName + $Random
         $apimname = "apim-" + $EnvironmentName + $Random
         $keyvaultname = "kv-" + $EnvironmentName + $Random
