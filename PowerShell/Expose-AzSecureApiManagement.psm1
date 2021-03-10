@@ -151,10 +151,9 @@ function  Expose-AzSecureApiManagement {
     }
     process {
         #Resource names
-        if ($ExistingEnvId == 0) {
+        if ($ExistingEnvId -eq 0) {
             $Random = Get-Random -Maximum 9999
-        }
-        else {
+        } else {
             $Random = $ExistingEnvId
         }
         $vnetname = "vnet-" + $EnvironmentName + $Random
